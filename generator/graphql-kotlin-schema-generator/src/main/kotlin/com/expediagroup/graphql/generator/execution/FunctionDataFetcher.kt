@@ -24,6 +24,7 @@ import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.future.future
+import kotlinx.coroutines.runBlocking
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.EmptyCoroutineContext
@@ -123,8 +124,13 @@ open class FunctionDataFetcher(
      * Once all parameters values are properly converted, this function will be called to run a simple blocking function.
      * If you need to override the exception handling you can override this method.
      */
-    protected open fun runBlockingFunction(parameterValues: Map<KParameter, Any?>): Any? = try {
-        fn.callBy(parameterValues)
+    protected open fun runBlockingFunction(
+        environment: DataFetchingEnvironment,
+        parameterValues: Map<KParameter, Any?>
+    ): Any? = try {
+        runBlocking(environment.graphQlContext.getOrDefault(CoroutineScope(EmptyCoroutineContext)).coroutineContext) {
+            fn.callBy(parameterValues)
+        }
     } catch (exception: InvocationTargetException) {
         throw exception.cause ?: exception
     }
